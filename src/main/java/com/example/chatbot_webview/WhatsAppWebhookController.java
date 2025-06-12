@@ -1,6 +1,7 @@
 package com.example.chatbot_webview;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,11 @@ import java.util.Map;
 @RestController
 @RequestMapping("/webhook")
 public class WhatsAppWebhookController {
+    @Value("${TOKEN}")
+    private String whatsappToken;
+
+    @Value("${MYTOKEN}")
+    private String verifyToken;
 
     @PostMapping
     public ResponseEntity<Void> receiveMessage(@RequestBody Map<String, Object> payload) {
@@ -52,7 +58,7 @@ public class WhatsAppWebhookController {
             @RequestParam("hub.challenge") String challenge,
             @RequestParam("hub.verify_token") String token) {
 
-        if ("subscribe".equals(mode) && "abc123".equals(token)) {
+        if ("subscribe".equals(mode) && verifyToken.equals(token)) {
             return ResponseEntity.ok(challenge);
         }
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -76,7 +82,7 @@ public class WhatsAppWebhookController {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .header("Authorization", "EAAUOGAq2S8wBO4nljvre2FoT7MiV9FI54v2QkWEAnaQ4ds9cEZBcZCMsBMSNVOW9Gf63YM8UnZB0RZAIWjj4QQCpshhqNwCcngDN1ftI4f55qkKuZAHZAFtZBl32RHRtR1BqEExdSnatxnbwRPowKbn2EUYMjrHGLLwAFTosQZC8mCoZCbEGJWil2ivFWDaMQJzaEAo7jHvtYw349vpMWBeKiFzQMWLGwuDIZD")
+                .header("Authorization", whatsappToken)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
