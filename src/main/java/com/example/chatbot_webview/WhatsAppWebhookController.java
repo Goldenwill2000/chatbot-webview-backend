@@ -23,7 +23,7 @@ public class WhatsAppWebhookController {
     @Value("${MYTOKEN}")
     private String verifyToken;
 
-    private static final String PHONE_ID = "689368164260551"; // your WhatsApp business phone ID
+    private final String WEB_APP_BASE_URL = "https://chatbot-webview.vercel.app";
 
     @PostMapping
     public ResponseEntity<Void> receiveMessage(@RequestBody Map<String, Object> payload) {
@@ -34,28 +34,40 @@ public class WhatsAppWebhookController {
 
             List<Map<String, Object>> messages = (List<Map<String, Object>>) value.get("messages");
 
-            if (messages != null) {
+            if (messages != null && !messages.isEmpty()) {
                 Map<String, Object> message = messages.get(0);
                 String from = (String) message.get("from");
 
                 if (message.containsKey("text")) {
-                    String text = (String) ((Map<String, Object>) message.get("text")).get("body");
-                    if ("hi".equalsIgnoreCase(text)) {
-                        sendWelcomeOptions(from);
-                    }
-                } else if (message.containsKey("button")) {
-                    String buttonId = (String) ((Map<String, Object>) message.get("button")).get("payload");
+                    String text = ((Map<String, Object>) message.get("text")).get("body").toString().trim().toLowerCase();
 
-                    switch (buttonId) {
-                        case "proposed_order":
+                    switch (text) {
+                        case "hi":
+                            sendInitialOptions(from);
+                            break;
+                        case "order history":
+                            sendSimpleMessage(from, "Here is your order history...");
+                            break;
+                        case "proposed order":
                             sendProposedOrderOptions(from);
                             break;
-                        case "order_history":
-                            sendMessage(from, "Showing your order history...");
-                            break;
                         case "leave":
-                            sendMessage(from, "You chose to leave.");
+                            sendSimpleMessage(from, "You chose to leave.");
                             break;
+                        default:
+                            sendSimpleMessage(from, "Please choose an option: hi, order history, or proposed order.");
+                            break;
+                    }
+                } else if (message.containsKey("button")) {
+                    Map<String, Object> button = (Map<String, Object>) message.get("button");
+                    String buttonText = button.get("text").toString().toLowerCase();
+
+                    if ("proposed order".equals(buttonText)) {
+                        sendProposedOrderOptions(from);
+                    } else if ("order history".equals(buttonText)) {
+                        sendSimpleMessage(from, "Here is your order history...");
+                    } else if ("leave".equals(buttonText)) {
+                        sendSimpleMessage(from, "You chose to leave.");
                     }
                 }
             }
@@ -79,7 +91,7 @@ public class WhatsAppWebhookController {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    private void sendWelcomeOptions(String to) throws IOException, InterruptedException {
+    private void sendInitialOptions(String to) throws IOException, InterruptedException {
         Map<String, Object> message = Map.of(
                 "messaging_product", "whatsapp",
                 "to", to,
@@ -99,7 +111,7 @@ public class WhatsAppWebhookController {
     }
 
     private void sendProposedOrderOptions(String to) throws IOException, InterruptedException {
-        String webviewUrl = "https://chatbot-webview.vercel.app?phone=" + to;
+        String webviewUrl = WEB_APP_BASE_URL + "?phone=" + to;
 
         Map<String, Object> message = Map.of(
                 "messaging_product", "whatsapp",
@@ -107,7 +119,7 @@ public class WhatsAppWebhookController {
                 "type", "interactive",
                 "interactive", Map.of(
                         "type", "button",
-                        "body", Map.of("text", "Click below to view more information."),
+                        "body", Map.of("text", "What would you like to do within Proposed Order?"),
                         "action", Map.of(
                                 "buttons", List.of(
                                         Map.of("type", "url", "url", webviewUrl, "title", "More Info"),
@@ -119,30 +131,29 @@ public class WhatsAppWebhookController {
         sendWhatsAppRequest(message);
     }
 
-    private void sendMessage(String to, String text) throws IOException, InterruptedException {
-        Map<String, Object> message = Map.of(
+    private void sendSimpleMessage(String to, String bodyText) throws IOException, InterruptedException {
+        Map<String, Object> payload = Map.of(
                 "messaging_product", "whatsapp",
                 "to", to,
                 "type", "text",
-                "text", Map.of("body", text)
+                "text", Map.of("body", bodyText)
         );
-        sendWhatsAppRequest(message);
+        sendWhatsAppRequest(payload);
     }
 
-    private void sendWhatsAppRequest(Map<String, Object> payload) throws IOException, InterruptedException {
+    private void sendWhatsAppRequest(Map<String, Object> message) throws IOException, InterruptedException {
         ObjectMapper objectMapper = new ObjectMapper();
-        String json = objectMapper.writeValueAsString(payload);
+        String json = objectMapper.writeValueAsString(message);
 
+        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://graph.facebook.com/v18.0/" + PHONE_ID + "/messages"))
+                .uri(URI.create("https://graph.facebook.com/v19.0/689368164260551/messages"))
                 .header("Authorization", "Bearer " + whatsappToken)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        HttpClient client = HttpClient.newHttpClient();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        System.out.println("WhatsApp response: " + response.statusCode() + " - " + response.body());
+        System.out.println("WhatsApp API response: " + response.statusCode() + " - " + response.body());
     }
 }
