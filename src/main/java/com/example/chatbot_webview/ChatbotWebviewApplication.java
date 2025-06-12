@@ -14,11 +14,11 @@ public class ChatbotWebviewApplication {
 		SpringApplication.run(ChatbotWebviewApplication.class, args);
 	}
 
-	@Bean
-	public TelegramBotsApi telegramBotsApi(MyBot myBot) throws TelegramApiException {
-		TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-		botsApi.registerBot(myBot);
-		return botsApi;
-	}
+//	@Bean
+//	public TelegramBotsApi telegramBotsApi(MyBot myBot) throws TelegramApiException {
+//		TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+//		botsApi.registerBot(myBot);
+//		return botsApi;
+//	}
 
 }

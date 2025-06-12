@@ -82,15 +82,17 @@ public class WhatsAppWebhookController {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .header("Authorization", whatsappToken)
+                .header("Authorization", "Bearer " + whatsappToken)  // FIXED
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
         try {
-            client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println("WhatsApp API response: " + response.statusCode() + " - " + response.body());  // LOG RESPONSE
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
+
 }
