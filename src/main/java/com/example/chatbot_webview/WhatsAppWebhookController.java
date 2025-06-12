@@ -11,18 +11,19 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/webhook")
 public class WhatsAppWebhookController {
+
     @Value("${TOKEN}")
     private String whatsappToken;
 
     @Value("${MYTOKEN}")
     private String verifyToken;
+
+    private static final String PHONE_ID = "689368164260551"; // your WhatsApp business phone ID
 
     @PostMapping
     public ResponseEntity<Void> receiveMessage(@RequestBody Map<String, Object> payload) {
@@ -36,12 +37,26 @@ public class WhatsAppWebhookController {
             if (messages != null) {
                 Map<String, Object> message = messages.get(0);
                 String from = (String) message.get("from");
-                Map<String, Object> textObj = (Map<String, Object>) message.get("text");
-                String text = (String) textObj.get("body");
 
-                // respond based on message
-                if ("hi".equalsIgnoreCase(text)) {
-                    sendMessage(from, "Hello! How can I assist you?");
+                if (message.containsKey("text")) {
+                    String text = (String) ((Map<String, Object>) message.get("text")).get("body");
+                    if ("hi".equalsIgnoreCase(text)) {
+                        sendWelcomeOptions(from);
+                    }
+                } else if (message.containsKey("button")) {
+                    String buttonId = (String) ((Map<String, Object>) message.get("button")).get("payload");
+
+                    switch (buttonId) {
+                        case "proposed_order":
+                            sendProposedOrderOptions(from);
+                            break;
+                        case "order_history":
+                            sendMessage(from, "Showing your order history...");
+                            break;
+                        case "leave":
+                            sendMessage(from, "You chose to leave.");
+                            break;
+                    }
                 }
             }
 
@@ -64,35 +79,70 @@ public class WhatsAppWebhookController {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    private void sendMessage(String to, String message) throws IOException {
-        String url = "https://graph.facebook.com/v22.0/689368164260551/messages";
+    private void sendWelcomeOptions(String to) throws IOException, InterruptedException {
+        Map<String, Object> message = Map.of(
+                "messaging_product", "whatsapp",
+                "to", to,
+                "type", "interactive",
+                "interactive", Map.of(
+                        "type", "button",
+                        "body", Map.of("text", "Hi! Select one of the options:"),
+                        "action", Map.of(
+                                "buttons", List.of(
+                                        Map.of("type", "reply", "reply", Map.of("id", "proposed_order", "title", "Proposed Order")),
+                                        Map.of("type", "reply", "reply", Map.of("id", "order_history", "title", "Order History"))
+                                )
+                        )
+                )
+        );
+        sendWhatsAppRequest(message);
+    }
 
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("messaging_product", "whatsapp");
-        payload.put("to", to);
-        payload.put("type", "text");
+    private void sendProposedOrderOptions(String to) throws IOException, InterruptedException {
+        String webviewUrl = "https://chatbot-webview.vercel.app?phone=" + to;
 
-        Map<String, String> text = new HashMap<>();
-        text.put("body", message);
-        payload.put("text", text);
+        Map<String, Object> message = Map.of(
+                "messaging_product", "whatsapp",
+                "to", to,
+                "type", "interactive",
+                "interactive", Map.of(
+                        "type", "button",
+                        "body", Map.of("text", "Click below to view more information."),
+                        "action", Map.of(
+                                "buttons", List.of(
+                                        Map.of("type", "url", "url", webviewUrl, "title", "More Info"),
+                                        Map.of("type", "reply", "reply", Map.of("id", "leave", "title", "Leave"))
+                                )
+                        )
+                )
+        );
+        sendWhatsAppRequest(message);
+    }
 
+    private void sendMessage(String to, String text) throws IOException, InterruptedException {
+        Map<String, Object> message = Map.of(
+                "messaging_product", "whatsapp",
+                "to", to,
+                "type", "text",
+                "text", Map.of("body", text)
+        );
+        sendWhatsAppRequest(message);
+    }
+
+    private void sendWhatsAppRequest(Map<String, Object> payload) throws IOException, InterruptedException {
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(payload);
 
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + whatsappToken)  // FIXED
+                .uri(URI.create("https://graph.facebook.com/v18.0/" + PHONE_ID + "/messages"))
+                .header("Authorization", "Bearer " + whatsappToken)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        try {
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            System.out.println("WhatsApp API response: " + response.statusCode() + " - " + response.body());  // LOG RESPONSE
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
+        System.out.println("WhatsApp response: " + response.statusCode() + " - " + response.body());
+    }
 }
