@@ -29,7 +29,7 @@ public class WhatsAppWebhookController {
     @PostMapping
     public ResponseEntity<Void> receiveMessage(@RequestBody Map<String, Object> payload) {
         try {
-            System.out.println("📨 Incoming webhook payload:\n" + new ObjectMapper().writeValueAsString(payload));
+            System.out.println("📥 Incoming webhook payload:\n" + payload);
 
             var entry = ((List<Map<String, Object>>) payload.get("entry")).get(0);
             var change = ((List<Map<String, Object>>) entry.get("changes")).get(0);
@@ -38,7 +38,8 @@ public class WhatsAppWebhookController {
 
             if (messages != null && !messages.isEmpty()) {
                 var message = messages.get(0);
-                System.out.println("🧾 Extracted message: " + message);
+                System.out.println("🔍 Extracted message: " + message);
+
                 String from = (String) message.get("from");
 
                 // Text message
@@ -49,24 +50,29 @@ public class WhatsAppWebhookController {
                     }
                 }
 
-                // Button click
-                if (message.containsKey("button")) {
-                    Map<String, Object> button = (Map<String, Object>) message.get("button");
-                    String payloadId = (String) button.get("payload");
-                    System.out.println("🎯 Button clicked with payload: " + payloadId);
+                // Interactive Button Click
+                if (message.containsKey("interactive")) {
+                    Map<String, Object> interactive = (Map<String, Object>) message.get("interactive");
+                    String interactiveType = (String) interactive.get("type");
 
-                    switch (payloadId) {
-                        case "proposed_order":
-                            sendCTA(from);
-                            break;
-                        case "order_history":
-                            sendSimpleMessage(from, "Here is your order history...");
-                            break;
-                        case "leave":
-                            sendSimpleMessage(from, "You chose to leave.");
-                            break;
-                        default:
-                            sendSimpleMessage(from, "Unknown option.");
+                    if ("button_reply".equals(interactiveType)) {
+                        Map<String, String> buttonReply = (Map<String, String>) interactive.get("button_reply");
+                        String payloadId = buttonReply.get("id");
+                        System.out.println("🎯 Button clicked with payload: " + payloadId);
+
+                        switch (payloadId) {
+                            case "proposed_order":
+                                sendCTA(from);
+                                break;
+                            case "order_history":
+                                sendSimpleMessage(from, "Here is your order history...");
+                                break;
+                            case "leave":
+                                sendSimpleMessage(from, "You chose to leave.");
+                                break;
+                            default:
+                                sendSimpleMessage(from, "Unknown option.");
+                        }
                     }
                 }
             }
@@ -122,30 +128,29 @@ public class WhatsAppWebhookController {
         Map<String, Object> interactive = new HashMap<>();
         interactive.put("type", "cta_url");
 
-        // Header
-        Map<String, Object> header = new HashMap<>();
-        header.put("type", "text");
-        header.put("text", "Order Ready");
+        Map<String, Object> header = Map.of(
+                "type", "text",
+                "text", "Order Ready"
+        );
+        Map<String, Object> body = Map.of(
+                "text", "Click below to view your order details."
+        );
+        Map<String, Object> footer = Map.of(
+                "text", "Powered by ChatBot"
+        );
+
+        Map<String, Object> action = Map.of(
+                "name", "cta_url",
+                "parameters", Map.of(
+                        "display_text", "View More",
+                        "url", WEBAPP_URL
+                )
+        );
+
         interactive.put("header", header);
-
-        // Body
-        Map<String, Object> body = new HashMap<>();
-        body.put("text", "Click below to view your order details.");
         interactive.put("body", body);
-
-        // Action
-        Map<String, Object> action = new HashMap<>();
-        action.put("name", "cta_url");
-        action.put("parameters", Map.of(
-                "display_text", "View More",
-                "url", WEBAPP_URL
-        ));
-        interactive.put("action", action);
-
-        // Footer (optional)
-        Map<String, Object> footer = new HashMap<>();
-        footer.put("text", "Powered by ChatBot");
         interactive.put("footer", footer);
+        interactive.put("action", action);
 
         payload.put("interactive", interactive);
 
@@ -175,7 +180,6 @@ public class WhatsAppWebhookController {
     private void sendToWhatsAppAPI(Map<String, Object> payload) throws IOException, InterruptedException {
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(payload);
-        System.out.println("🚀 Sending payload to WhatsApp:\n" + json);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(WHATSAPP_API_URL))
@@ -186,6 +190,7 @@ public class WhatsAppWebhookController {
 
         HttpClient client = HttpClient.newHttpClient();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        System.out.println("📬 WhatsApp API response: " + response.statusCode() + " - " + response.body());
+
+        System.out.println("📤 WhatsApp API response: " + response.statusCode() + " - " + response.body());
     }
 }
