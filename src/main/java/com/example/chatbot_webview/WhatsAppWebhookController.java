@@ -54,6 +54,7 @@ public class WhatsAppWebhookController {
 
                     switch (payloadId) {
                         case "Proposed Order":
+                            System.out.println("Proposed Order Chosen!");
                             sendCTA(from);
                             break;
                         case "order_history":
