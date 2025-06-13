@@ -8,11 +8,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @RestController
@@ -31,6 +29,8 @@ public class WhatsAppWebhookController {
     @PostMapping
     public ResponseEntity<Void> receiveMessage(@RequestBody Map<String, Object> payload) {
         try {
+            System.out.println("📨 Incoming webhook payload:\n" + new ObjectMapper().writeValueAsString(payload));
+
             var entry = ((List<Map<String, Object>>) payload.get("entry")).get(0);
             var change = ((List<Map<String, Object>>) entry.get("changes")).get(0);
             var value = (Map<String, Object>) change.get("value");
@@ -38,6 +38,7 @@ public class WhatsAppWebhookController {
 
             if (messages != null && !messages.isEmpty()) {
                 var message = messages.get(0);
+                System.out.println("🧾 Extracted message: " + message);
                 String from = (String) message.get("from");
 
                 // Text message
@@ -50,7 +51,9 @@ public class WhatsAppWebhookController {
 
                 // Button click
                 if (message.containsKey("button")) {
-                    String payloadId = ((Map<String, String>) message.get("button")).get("payload");
+                    Map<String, Object> button = (Map<String, Object>) message.get("button");
+                    String payloadId = (String) button.get("payload");
+                    System.out.println("🎯 Button clicked with payload: " + payloadId);
 
                     switch (payloadId) {
                         case "proposed_order":
@@ -149,7 +152,6 @@ public class WhatsAppWebhookController {
         sendToWhatsAppAPI(payload);
     }
 
-
     private void sendSimpleMessage(String to, String text) throws IOException, InterruptedException {
         Map<String, Object> payload = new HashMap<>();
         payload.put("messaging_product", "whatsapp");
@@ -173,6 +175,7 @@ public class WhatsAppWebhookController {
     private void sendToWhatsAppAPI(Map<String, Object> payload) throws IOException, InterruptedException {
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(payload);
+        System.out.println("🚀 Sending payload to WhatsApp:\n" + json);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(WHATSAPP_API_URL))
@@ -183,6 +186,6 @@ public class WhatsAppWebhookController {
 
         HttpClient client = HttpClient.newHttpClient();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        System.out.println("WhatsApp API response: " + response.statusCode() + " - " + response.body());
+        System.out.println("📬 WhatsApp API response: " + response.statusCode() + " - " + response.body());
     }
 }
