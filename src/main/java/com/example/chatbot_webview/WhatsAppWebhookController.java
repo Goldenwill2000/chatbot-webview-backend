@@ -53,7 +53,7 @@ public class WhatsAppWebhookController {
                     String payloadId = ((Map<String, String>) message.get("button")).get("payload");
 
                     switch (payloadId) {
-                        case "proposed_order":
+                        case "Proposed Order":
                             sendCTA(from);
                             break;
                         case "order_history":
