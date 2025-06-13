@@ -24,7 +24,7 @@ public class WhatsAppWebhookController {
     private String verifyToken;
 
     private final String WHATSAPP_API_URL = "https://graph.facebook.com/v22.0/689368164260551/messages";
-    private final String WEBAPP_URL = "https://rss-test.np.accenture.com/CBLA_Lite_Web/bo-redirect?param=eyJ1c2VybmFtZSI6Ik5QVEhPIiwicGFzc3dvcmQiOiI5Y2MzZTVhYmRmYWVlMTk4YTZiNzRiOTdlYTkxZTMwNmUxNzQ0ZGRmNDk4NzZkM2RjZjZjYjkzNmRmZDVjOWQ3IiwicG9zSWQiOiJCTEJDIiwiZW52IjoiU0lNIiwicmVkaXJlY3QiOiJTQUxFU19PUkRFUiJ9";
+    private final String WEBAPP_URL = "https://rss-test.np.accenture.com/CBLA_Lite_Web/bo-redirect?param=eyJ1c2VybmFtZSI6Ik5QVEhPIiwicGFzc3dvcmQiOiI5Y2MzZTVhYmRmYWVlMTk4YTZiNzRiOTdlYTkxZTMwNmUxNzQ0ZGRmNDk4NzZkM2RjZjZjYjkzNmRmZDVjOWQ3IiwicG9zSWQiOiJCTEJDIiwiZW52IjoiU0lNIiwicmVkaXJlY3QiOiJTQUxFU19PUkRFUiJ9"; // Base URL without params
 
     @PostMapping
     public ResponseEntity<Void> receiveMessage(@RequestBody Map<String, Object> payload) {
@@ -117,23 +117,62 @@ public class WhatsAppWebhookController {
     }
 
     private void sendCTA(String to) throws IOException, InterruptedException {
+        // Extract country code from 'to' number
         String countryCode = extractCountryCode(to);
 
-        String urlWithCC = WEBAPP_URL + "?cc=" + countryCode;
+        // Append country code as query param, handling if URL already has params
+        String urlWithCC = appendQueryParam(WEBAPP_URL, "cc", countryCode);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("messaging_product", "whatsapp");
         payload.put("to", to);
-        payload.put("type", "text");
-        payload.put("text", Map.of(
-                "body", "Your order is ready! 🔗 Click here to view: " + urlWithCC
-        ));
+        payload.put("type", "interactive");
+
+        Map<String, Object> interactive = new HashMap<>();
+        interactive.put("type", "button");
+
+        // Header text (required for CTA or can be text type)
+        Map<String, Object> header = Map.of(
+                "type", "text",
+                "text", "Order Ready"
+        );
+
+        Map<String, Object> body = Map.of(
+                "text", "Click the button below to view your order details."
+        );
+
+        List<Map<String, Object>> buttons = new ArrayList<>();
+        Map<String, Object> urlButton = Map.of(
+                "type", "url",
+                "url", urlWithCC,
+                "title", "View More"
+        );
+        buttons.add(urlButton);
+
+        Map<String, Object> action = Map.of(
+                "buttons", buttons
+        );
+
+        interactive.put("header", header);
+        interactive.put("body", body);
+        interactive.put("action", action);
+
+        payload.put("interactive", interactive);
 
         sendToWhatsAppAPI(payload);
     }
 
+    private String appendQueryParam(String url, String key, String value) {
+        if (url.contains("?")) {
+            return url + "&" + key + "=" + value;
+        } else {
+            return url + "?" + key + "=" + value;
+        }
+    }
+
     private String extractCountryCode(String phone) {
-        if (phone.startsWith("1")) return "1";
+        // Simple extraction, customize as needed
+        if (phone.startsWith("1")) return "1";       // North America
         if (phone.startsWith("60")) return "60";     // Malaysia
         if (phone.startsWith("65")) return "65";     // Singapore
         if (phone.length() >= 3) return phone.substring(0, 3);
