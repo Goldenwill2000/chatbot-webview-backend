@@ -59,7 +59,7 @@ public class MyBot extends TelegramLongPollingBot {
         webAppButton.setText("More Info");
 
         String baseUrl = "https://rss-test.np.accenture.com/CBLA_Lite_Web/bo-redirect?param=eyJ1c2VybmFtZSI6Ik5QVEhPIiwicGFzc3dvcmQiOiI5Y2MzZTVhYmRmYWVlMTk4YTZiNzRiOTdlYTkxZTMwNmUxNzQ0ZGRmNDk4NzZkM2RjZjZjYjkzNmRmZDVjOWQ3IiwicG9zSWQiOiJCTEJDIiwiZW52IjoiU0lNIiwicmVkaXJlY3QiOiJTQUxFU19PUkRFUiJ9";
-        String webAppUrl = baseUrl + "?chatId=" + chatId + "&firstName=" + URLEncoder.encode(firstName, StandardCharsets.UTF_8);
+        String webAppUrl = baseUrl + "&chatId=" + chatId + "&firstName=" + URLEncoder.encode(firstName, StandardCharsets.UTF_8);
         System.out.println(webAppUrl+"test");
         webAppButton.setUrl(webAppUrl);
 
