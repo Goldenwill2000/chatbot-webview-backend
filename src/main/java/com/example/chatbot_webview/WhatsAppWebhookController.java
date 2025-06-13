@@ -54,7 +54,7 @@ public class WhatsAppWebhookController {
 
                     switch (payloadId) {
                         case "proposed_order":
-                            sendCtaUrlMessage(from);
+                            sendCTA(from);
                             break;
                         case "order_history":
                             sendSimpleMessage(from, "Here is your order history...");
@@ -109,30 +109,31 @@ public class WhatsAppWebhookController {
         sendToWhatsAppAPI(payload);
     }
 
-    private void sendCtaUrlMessage(String to) throws IOException, InterruptedException {
-        String encodedUser = URLEncoder.encode(to, StandardCharsets.UTF_8);
-        String userLink = WEBAPP_URL + "?user=" + encodedUser;
-
+    private void sendCTA(String to) throws  IOException, InterruptedException{
         Map<String, Object> payload = new HashMap<>();
-        payload.put("messaging_product", "whatsapp");
-        payload.put("to", to);
-        payload.put("type", "interactive");
+        payload.put("messaging_product", "whatsapp"); //messaging product
+        payload.put("recipient_type", "individual"); //recipient_type
+        payload.put("to", to); //to
+        payload.put("type", "interactive"); //type
 
-        Map<String, Object> interactive = new HashMap<>();
+        Map<String, Object> interactive = new HashMap<>(); //interactive
+        Map<String, Object> header = new HashMap<>();
+        header.put("type", "text");
+        header.put("text", "Order Ready");
         interactive.put("type", "cta_url");
+        interactive.put("header", header);
 
-        interactive.put("body", Map.of("text", "Click below to view your proposed orders."));
-        interactive.put("action", Map.of(
-                "name", "cta_url",
-                "parameters", Map.of(
-                        "display_text", "View More",
-                        "url", userLink
-                )
-        ));
+        Map<String, Object> body = new HashMap<>(); //body
+        body.put("text", "Click below to view your order details");
 
-        payload.put("interactive", interactive);
+
+        Map<String, Object> action = new HashMap<>(); //body
+        action.put("name", "cta_url");
+        action.put("parameters", "View More");
+        action.put("url", WEBAPP_URL);
 
         sendToWhatsAppAPI(payload);
+
     }
 
     private void sendSimpleMessage(String to, String text) throws IOException, InterruptedException {
