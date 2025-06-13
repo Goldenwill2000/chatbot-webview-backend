@@ -23,7 +23,7 @@ public class WhatsAppWebhookController {
     @Value("${MYTOKEN}")
     private String verifyToken;
 
-    private final String WHATSAPP_API_URL = "https://graph.facebook.com/v19.0/689368164260551/messages";
+    private final String WHATSAPP_API_URL = "https://graph.facebook.com/v22.0/689368164260551/messages";
     private final String WEBAPP_URL = "https://rss-test.np.accenture.com/CBLA_Lite_Web/bo-redirect?param=eyJ1c2VybmFtZSI6Ik5QVEhPIiwicGFzc3dvcmQiOiI5Y2MzZTVhYmRmYWVlMTk4YTZiNzRiOTdlYTkxZTMwNmUxNzQ0ZGRmNDk4NzZkM2RjZjZjYjkzNmRmZDVjOWQ3IiwicG9zSWQiOiJCTEJDIiwiZW52IjoiU0lNIiwicmVkaXJlY3QiOiJTQUxFU19PUkRFUiJ9";
 
     @PostMapping
