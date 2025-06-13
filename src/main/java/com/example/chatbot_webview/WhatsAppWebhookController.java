@@ -124,6 +124,9 @@ public class WhatsAppWebhookController {
         payload.put("recipient_type", "individual");
         payload.put("to", to);
         payload.put("type", "interactive");
+        String countryCode = Utilities.extractCountryCode(to);
+
+
 
         Map<String, Object> interactive = new HashMap<>();
         interactive.put("type", "cta_url");
@@ -143,7 +146,7 @@ public class WhatsAppWebhookController {
                 "name", "cta_url",
                 "parameters", Map.of(
                         "display_text", "View More",
-                        "url", WEBAPP_URL
+                        "url", WEBAPP_URL + "&cc=" + countryCode
                 )
         );
 
