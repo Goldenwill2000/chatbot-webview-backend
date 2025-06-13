@@ -54,7 +54,7 @@ public class WhatsAppWebhookController {
 
                     switch (payloadId) {
                         case "proposed_order":
-                            sendProposedOrderOptions(from);
+                            sendCtaUrlMessage(from);
                             break;
                         case "order_history":
                             sendSimpleMessage(from, "Here is your order history...");
@@ -109,23 +109,27 @@ public class WhatsAppWebhookController {
         sendToWhatsAppAPI(payload);
     }
 
-    private void sendProposedOrderOptions(String to) throws IOException, InterruptedException {
+    private void sendCtaUrlMessage(String to) throws IOException, InterruptedException {
+        String encodedUser = URLEncoder.encode(to, StandardCharsets.UTF_8);
+        String userLink = WEBAPP_URL + "?user=" + encodedUser;
+
         Map<String, Object> payload = new HashMap<>();
         payload.put("messaging_product", "whatsapp");
         payload.put("to", to);
         payload.put("type", "interactive");
 
         Map<String, Object> interactive = new HashMap<>();
-        interactive.put("type", "button");
+        interactive.put("type", "cta_url");
 
-        Map<String, String> body = Map.of("text", "Here are your Proposed Order options:");
-        interactive.put("body", body);
+        interactive.put("body", Map.of("text", "Click below to view your proposed orders."));
+        interactive.put("action", Map.of(
+                "name", "cta_url",
+                "parameters", Map.of(
+                        "display_text", "View More",
+                        "url", userLink
+                )
+        ));
 
-        List<Map<String, Object>> buttons = new ArrayList<>();
-        buttons.add(linkButton("View More", WEBAPP_URL + "?user=" + URLEncoder.encode(to, StandardCharsets.UTF_8)));
-        buttons.add(button("leave", "Leave"));
-
-        interactive.put("action", Map.of("buttons", buttons));
         payload.put("interactive", interactive);
 
         sendToWhatsAppAPI(payload);
@@ -146,16 +150,6 @@ public class WhatsAppWebhookController {
                 "type", "reply",
                 "reply", Map.of(
                         "id", id,
-                        "title", title
-                )
-        );
-    }
-
-    private Map<String, Object> linkButton(String title, String url) {
-        return Map.of(
-                "type", "url",
-                "url", Map.of(
-                        "link", url,
                         "title", title
                 )
         );
