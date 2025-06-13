@@ -50,7 +50,6 @@ public class WhatsAppWebhookController {
                     }
                 }
 
-                // Interactive Button Click
                 if (message.containsKey("interactive")) {
                     Map<String, Object> interactive = (Map<String, Object>) message.get("interactive");
                     String interactiveType = (String) interactive.get("type");
